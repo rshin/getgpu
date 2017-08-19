@@ -1,0 +1,6 @@
+[flake8]
+# E111: indentation is not a mulitple of four
+# E114: indentation is not a multiple of four (comment)
+# E125: continuation line with same indent as next logical line
+# F401: `module` imported but unused
+ignore = E111,E114,E125,F401

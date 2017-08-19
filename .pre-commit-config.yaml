@@ -1,0 +1,12 @@
+- repo: git://github.com/pre-commit/mirrors-yapf
+  sha: v0.16.2
+  hooks:
+  - id: yapf
+
+- repo: git://github.com/pre-commit/pre-commit-hooks
+  sha: v0.8.0
+  hooks:
+  - id: check-merge-conflict
+  - id: end-of-file-fixer
+  - id: flake8
+  - id: trailing-whitespace
