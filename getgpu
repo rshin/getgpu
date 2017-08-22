@@ -38,6 +38,9 @@ def prepare_dir():
 
 
 def claim(device, startup_time):
+  dir_fd = os.open(DIR_NAME, os.O_RDONLY, 0o777)
+  fcntl.flock(dir_fd, fcntl.LOCK_EX)
+
   path = os.path.join(DIR_NAME, str(device))
   try:
     mtime = os.stat(path).st_mtime
@@ -47,43 +50,19 @@ def claim(device, startup_time):
     else:
       raise e
 
+  # We can claim this GPU if the current time is past the mtime.
   now = time.time()
-  if now - mtime >= startup_time:
-    # Try to create the file and note if we created it ourselves.
-    try:
-      fd = os.open(path, os.O_RDONLY | os.O_CREAT | os.O_EXCL, 0o777)
-      file_created = True
-    except OSError as e:
-      if e.errno == errno.EEXIST:
-        file_created = False
-        fd = os.open(path, os.O_RDONLY | os.O_CREAT, 0o777)
-      else:
-        raise e
+  if now >= mtime:
+    # Since we will claim this GPU, update mtime to now + startup_time.
+    fd = os.open(path, os.O_RDONLY | os.O_CREAT, 0o777)
+    new_time = int(now + startup_time)
+    os.utime(path, (new_time, new_time))
+    result = True
+  else:
+    result = False
 
-    if file_created:
-      # If we created the file ourselves, then nobody else will try to use this
-      # GPU until mtime + startup_time.
-      return True
-
-    # We didn't create the file.
-    # Get a lock for exclusive access to the file, and
-    # then check that the mtime is still valid.
-    try:
-      fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except OSError as e:
-      if e.errno in (errno.EACCES, errno.EAGAIN):
-        # We failed to get the lock, so give up
-        return False
-      else:
-        raise e
-    mtime = os.stat(path).st_mtime
-    if now - mtime < startup_time:
-      result = False
-    else:
-      os.utime(path, None)
-      result = True
-    fcntl.flock(fd, fcntl.LOCK_UN)
-    return result
+  fcntl.flock(dir_fd, fcntl.LOCK_UN)
+  return result
 
 
 def main():
@@ -99,9 +78,10 @@ def main():
       '--startup-time',
       type=int,
       default=30,
-      help='Amount of seconds we will treat a GPU as occupied, after '
-      'a different `getgpu` has claimed it but before a process actually '
-      'starts using it.')
+      help='Maximum amount of seconds allowed for a process to begin using '
+      'the provisioned GPU. If nothing has begun actually using the GPU '
+      'after this many seconds, then a different instance of getgpu might '
+      'claim it for itself.')
   args = parser.parse_args()
 
   # Initialization
@@ -135,11 +115,12 @@ def main():
     now = time.time()
     if end < now:
       break
-    message('getgpu: waiting for GPU...')
+    message('waiting for GPU...')
     time.sleep(min(args.wait, end - now, 1))
 
-  message('getgpu: failed to obtain a GPU in {} seconds'.format(args.wait))
+  message('failed to obtain a GPU in {} seconds'.format(args.wait))
   sys.exit(-1)
+
 
 if __name__ == '__main__':
   main()
