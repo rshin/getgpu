@@ -13,10 +13,8 @@ pip install --user git+https://github.com/rshin/getgpu
 
 To set `CUDA_VISIBLE_DEVICES`:
 ```bash
-G=$(getgpu) CUDA_VISIBLE_DEVICES=${G:?} python ...
+getgpu -- [program to run] ...
 ```
-Use of `${G:?}` ensures that if `getgpu` fails, then the rest of the command
-does not run.
 
 Run `getgpu --help` to see options.
 

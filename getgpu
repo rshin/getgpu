@@ -5,6 +5,8 @@ import errno
 import fcntl
 import os
 import random
+import signal
+import subprocess
 import stat
 import sys
 import time
@@ -13,6 +15,10 @@ import pynvml
 
 DIR_NAME = '/tmp/getgpu'
 PID = os.getpid()
+
+
+def ignore(*args):
+  return
 
 
 def message(s):
@@ -82,6 +88,7 @@ def main():
       'the provisioned GPU. If nothing has begun actually using the GPU '
       'after this many seconds, then a different instance of getgpu might '
       'claim it for itself.')
+  parser.add_argument('program', nargs='+')
   args = parser.parse_args()
 
   # Initialization
@@ -107,9 +114,9 @@ def main():
     random.shuffle(unoccupied)
     for device in unoccupied:
       if claim(device, args.startup_time):
-        print(device)
         message('Assigned GPU {}.'.format(device))
-        return
+        signal.signal(signal.SIGINT, ignore)
+        sys.exit(subprocess.call(args.program))
 
     # We didn't claim a GPU, so wait a random amount of time.
     now = time.time()
