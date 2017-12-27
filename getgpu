@@ -92,7 +92,7 @@ def main():
   args = parser.parse_args()
 
   # Initialization
-  os.umask(0)
+  old_umask = os.umask(0)
   random.seed(os.getpid())
   pynvml.nvmlInit()
   if not prepare_dir():
@@ -115,6 +115,7 @@ def main():
     for device in unoccupied:
       if claim(device, args.startup_time):
         message('Assigned GPU {}.'.format(device))
+        os.umask(old_umask)
         signal.signal(signal.SIGINT, ignore)
         sys.exit(subprocess.call(args.program))
 
