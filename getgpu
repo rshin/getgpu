@@ -116,6 +116,7 @@ def main():
       if claim(device, args.startup_time):
         message('Assigned GPU {}.'.format(device))
         os.umask(old_umask)
+        os.environ['CUDA_VISIBLE_DEVICES'] = format(device)
         signal.signal(signal.SIGINT, ignore)
         sys.exit(subprocess.call(args.program))
 
