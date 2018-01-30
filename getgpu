@@ -88,6 +88,9 @@ def main():
       'the provisioned GPU. If nothing has begun actually using the GPU '
       'after this many seconds, then a different instance of getgpu might '
       'claim it for itself.')
+  parser.add_argument(
+      '--shell',
+      action='store_true')
   parser.add_argument('program', nargs='+')
   args = parser.parse_args()
 
@@ -118,7 +121,10 @@ def main():
         os.umask(old_umask)
         os.environ['CUDA_VISIBLE_DEVICES'] = format(device)
         signal.signal(signal.SIGINT, ignore)
-        sys.exit(subprocess.call(args.program))
+        if args.shell:
+          sys.exit(subprocess.call(' '.join(args.program), shell=True))
+        else:
+          sys.exit(subprocess.call(args.program))
 
     # We didn't claim a GPU, so wait a random amount of time.
     now = time.time()
